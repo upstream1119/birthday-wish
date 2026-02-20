@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Happy Birthday!</title>
+    <style>
+        /* --- 全局重置 --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: linear-gradient(180deg, #fff0f5 0%, #ffe4e1 100%);
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            color: #5d4037;
+            display: flex;
+            justify-content: center;
+            background-color: #f0f0f0;
+        }
+
+        /* --- 📱 手机容器 --- */
+        #app-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            max-width: 450px;
+            background: linear-gradient(180deg, #fff0f5 0%, #ffe4e1 100%);
+            overflow: hidden;
+            box-shadow: 0 0 40px rgba(0,0,0,0.1);
+        }
+
+        /* --- 启动页 & 重播页 --- */
+        #start-screen, #replay-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #fff0f5; z-index: 999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            transition: opacity 0.5s;
+        }
+        #replay-screen { display: none; opacity: 0; }
+
+        .play-btn {
+            width: 80px; height: 80px;
+            background: #ff6b81;
+            border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 0 20px rgba(255, 107, 129, 0.4);
+            animation: pulse 2s infinite;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .play-btn:active { transform: scale(0.95); }
+
+        /* 开始图标 */
+        .play-icon {
+            width: 0; height: 0;
+            border-left: 25px solid #fff;
+            border-top: 15px solid transparent;
+            border-bottom: 15px solid transparent;
+            margin-left: 5px;
+        }
+
+        /* 重播图标 (SVG) */
+        .replay-icon-svg {
+            width: 40px; height: 40px;
+            fill: #fff;
+        }
+
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
+        /* --- 音乐按钮 --- */
+        .music-btn {
+            position: absolute; top: 20px; right: 20px; z-index: 100;
+            width: 36px; height: 36px; background: rgba(255,255,255,0.8);
+            border-radius: 50%; box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex; justify-content: center; align-items: center; cursor: pointer;
+            display: none;
+        }
+        .music-btn.playing { animation: spin 4s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* --- 页面通用 --- */
+        .page {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: none; flex-direction: column;
+            justify-content: flex-start;
+            padding-top: 30px;
+            opacity: 0; transition: opacity 0.8s ease;
+        }
+        .page.active { display: flex; opacity: 1; z-index: 10; }
+
+        /* --- 图片容器 --- */
+        .img-area {
+            position: relative;
+            width: 100%;
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            perspective: 1000px;
+        }
+
+        .img-area img {
+            display: block;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+            background: #fff;
+            transition: all 0.5s;
+        }
+
+        /* --- 文字容器 --- */
+        .text-area {
+            position: relative;
+            width: 100%;
+            padding: 10px 30px 110px 30px;
+            text-align: center;
+            z-index: 20;
+            background: linear-gradient(to top, #ffe4e1 15%, transparent 100%);
+        }
+        .title { font-size: 1.4rem; color: #ff6b81; margin-bottom: 8px; font-weight: bold; letter-spacing: 1px; }
+        .desc { font-size: 0.95rem; line-height: 1.6; color: #666; white-space: pre-wrap; }
+
+        /* =========================================
+           🌟 核心版式 CSS (已放宽极限高度与宽度)
+           ========================================= */
+
+        /* 1. HERO (主角) */
+        .style-hero .img-area img {
+            max-width: 90%; max-height: 60vh; /* 极限放大 */
+            border-radius: 12px; border: 5px solid #fff;
+            --r: -2deg;
+        }
+
+        /* 2. FILM (胶卷) */
+        .style-film .img-area { flex-direction: column; justify-content: flex-start; padding-top: 5px; }
+        .style-film img {
+            max-width: 85%; /* 放宽宽度限制 */
+            max-height: 22vh; /* 大幅放宽高度，竖图也能变大 */
+            margin-bottom: 12px;
+            border: 4px solid #fff; border-bottom: 15px solid #fff;
+        }
+        .style-film img:nth-child(1) { --r: -2deg; margin-left: -15px; }
+        .style-film img:nth-child(2) { --r: 2deg; margin-right: -15px;}
+        .style-film img:nth-child(3) { --r: -1deg; margin-left: -5px;}
+
+        /* 3. GRID (拼图) */
+        .style-grid .img-area { flex-direction: column; justify-content: center; }
+        .style-grid img {
+            max-width: 85%; max-height: 30vh; /* 调大限制 */
+            margin: 5px 0;
+            border-radius: 4px; --r: 0deg;
+        }
+        .style-grid img:nth-child(1) { border-radius: 12px 12px 0 12px; margin-left: -10px; }
+        .style-grid img:nth-child(2) { border-radius: 0 12px 12px 12px; margin-right: -10px; }
+
+        /* 4. SCATTER (散落) */
+        .style-scatter .img-area img {
+            position: absolute;
+            max-width: 55%; max-height: 35vh; /* 调大限制 */
+            border: 4px solid #fff;
+        }
+        .style-scatter img:nth-child(1) { top: 5%; left: 8%; --r: -6deg; z-index: 1; }
+        .style-scatter img:nth-child(2) { top: 30%; right: 8%; --r: 5deg; z-index: 2; }
+        .style-scatter img:nth-child(3) { top: 55%; left: 12%; --r: -3deg; z-index: 3; }
+        .style-scatter .img-area img:nth-child(1):nth-last-child(2) { top: 12%; left: 12%; }
+        .style-scatter .img-area img:nth-child(2):nth-last-child(1) { top: 40%; right: 12%; }
+
+        /* 5. MAGAZINE (杂志) */
+        .style-magazine .img-area { align-items: flex-start; padding-top: 20px; justify-content: center; }
+        .style-magazine img {
+            max-width: 90%; max-height: 60vh; border-radius: 80px 80px 0 0;
+            border: 4px solid #fff; --r: 0deg;
+        }
+
+        /* 6. SIMPLE (正中) */
+        .style-simple .img-area img {
+            max-width: 85%; max-height: 60vh;
+            border: 8px solid #fff; border-bottom: 25px solid #fff;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15); --r: 0deg;
+        }
+
+        /* --- 动画 --- */
+        .page.active .img-area img { animation: zoomIn 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; opacity: 0; }
+        .page.active .text-area { animation: slideUp 1s 0.4s ease forwards; opacity: 0; transform: translateY(20px); }
+
+        @keyframes zoomIn { from { opacity: 0; transform: scale(0.9) rotate(0deg); } to { opacity: 1; transform: scale(1) rotate(var(--r, 0deg)); } }
+        @keyframes slideUp { to { opacity: 1; transform: translateY(0); } }
+
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+
+        <div id="start-screen">
+            <div class="play-btn" onclick="startJourney()">
+                <div class="play-icon"></div>
+            </div>
+            <p style="margin-top: 20px; color: #ff6b81; font-weight: bold;">点击开启 20 岁</p>
+        </div>
+
+        <div id="replay-screen">
+            <div class="play-btn" onclick="replayJourney()">
+                <svg class="replay-icon-svg" viewBox="0 0 24 24">
+                    <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                </svg>
+            </div>
+            <p style="margin-top: 20px; color: #ff6b81; font-weight: bold;">再看亿遍 ✨</p>
+        </div>
+
+        <div class="music-btn" id="musicBtn">🎵</div>
+        <audio id="bgm" src="bgm.mp3"></audio>
+
+        <div id="stage"></div>
+
+    </div>
+
+    <script>
+        // ==========================================
+        // 🌟 Wishlist 配置 (4.7s x 13页 = 61.1秒)
+        // ==========================================
+        const slides = [
+            // --- 01. Intro ---
+            {
+                style: 'magazine',
+                imgs: ['img/1.jpg'],
+                title: 'Hey Girl',
+                text: '我最亲爱的你\n20岁生日快乐！'
+            },
+
+            // --- 02. Verse ---
+            {
+                style: 'film',
+                imgs: ['img/2_1.jpg', 'img/2_2.jpg', 'img/2_3.jpg'],
+                title: '时光飞逝',
+                text: '算算时间，一晃已经四年多过去了。\n现在想想以前的点点滴滴还是很美好。'
+            },
+
+            // --- 03. ---
+            {
+                style: 'grid',
+                imgs: ['img/3_1.jpg', 'img/3_2.jpg'],
+                title: '相隔两地',
+                text: '虽然我们大半年都在异地，不能想见就见。\n但每天的碎碎念，偶尔的deep talk\n是我每天最放松、最安心的时刻。'
+            },
+
+            // --- 04. 默契与合拍 ---
+            {
+                style: 'hero',
+                imgs: ['img/4.jpg'],
+                title: '最好的朋友',
+                text: '跟你在一起最舒服的一点就是，\n什么废话都可以随便说。\n不管遇到多小的事，开心的还是想吐槽的，\n第一个想分享的人永远是你。'
+            },
+
+            // --- 05. 心疼 ---
+            {
+                style: 'scatter',
+                imgs: ['img/5_1.jpg', 'img/5_2.jpg'],
+                title: '辛苦啦',
+                text: '小宝的课业比我重多了，还要忙团委的各种事情。\n不要老为没发生的事情内耗焦虑！\n在我心里你是最棒的'
+            },
+
+            // --- 06. Pre-Chorus ---
+            {
+                style: 'grid',
+                imgs: ['img/6_1.jpg', 'img/6_2.jpg'],
+                title: '想见你',
+                text: '每次去见你的路上，\n心情都跟这首歌的鼓点一样。\n\n真的好想好想快点结束异地啊，\n带你去那些我们要去的地方。'
+            },
+
+            // --- 07. 铺垫结束 ---
+            {
+                style: 'hero',
+                imgs: ['img/7.jpg'],
+                title: '听~',
+                text: '碎碎念了这么多，\n其实今天最想对你说的话还在后面。'
+            },
+
+            // --- 08. Chorus ---
+            {
+                style: 'hero',
+                imgs: ['img/8.jpg'],
+                title: '💥 20岁快乐！',
+                text: '祝我的女孩20岁生日快乐！！\n\n希望你永远明媚、永远自由、\n永远做那个无忧无虑的小朋友！'
+            },
+
+            // --- 09. Wishlist ---
+            {
+                style: 'scatter',
+                imgs: ['img/9_1.jpg', 'img/9_2.jpg'],
+                title: 'My Wishlist',
+                text: '我也希望小宝新的一岁能少熬点夜，\n每天都能睡个无忧无虑的好觉，\n所有的努力都能得到满分的回报，\n你一定可以成功的！'
+            },
+
+            // --- 10. ---
+            {
+                style: 'magazine',
+                imgs: ['img/10.jpg'],
+                title: '做你自己',
+                text: '想做什么就大胆去做吧，\n不要有什么顾虑。\n反正无论如何，我都无条件站在你这边。'
+            },
+
+            // --- 11. ---
+            {
+                style: 'film',
+                imgs: ['img/11_1.jpg', 'img/11_2.jpg', 'img/11_3.jpg'],
+                title: '谢谢你',
+                text: '很想跟你说谢谢。\n异地恋真的很辛苦，但你从来没抱怨过。\n谢谢你一直陪着我，\n也包容我的缺点。'
+            },
+
+            // --- 12. ---
+            {
+                style: 'scatter',
+                imgs: ['img/12_1.jpg', 'img/12_2.jpg'],
+                title: '等你',
+                text: '今年不能在你身边过生日\n\n希望之后再也不会缺席了！'
+            },
+
+            // --- 13. End ---
+            {
+                style: 'simple',
+                imgs: ['img/13.jpg'],
+                title: 'Love You',
+                text: '小宝20岁的第一天，\n一定要过的开心！\n\n❤️爱你的彭意涵\n2026.2.22'
+            }
+        ];
+
+        // ==========================================
+        // ⚙️ 逻辑代码
+        // ==========================================
+        let currentIndex = 0;
+        let autoPlayTimer = null;
+        // 4700ms * 13页 = 61.1秒
+        const AUTO_PLAY_INTERVAL = 4700;
+
+        const stage = document.getElementById('stage');
+        const startScreen = document.getElementById('start-screen');
+        const replayScreen = document.getElementById('replay-screen');
+        const bgm = document.getElementById('bgm');
+        const musicBtn = document.getElementById('musicBtn');
+
+        function render() {
+            let html = '';
+            slides.forEach((slide, index) => {
+                const activeClass = index === 0 ? 'active' : '';
+                let imgsHtml = '';
+                slide.imgs.forEach(src => imgsHtml += `<img src="${src}">`);
+
+                html += `
+                    <div class="page style-${slide.style} ${activeClass}" data-index="${index}">
+                        <div class="img-area">${imgsHtml}</div>
+                        <div class="text-area">
+                            <div class="title">${slide.title}</div>
+                            <div class="desc">${slide.text}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            stage.innerHTML = html;
+        }
+
+        // 第一次开始
+        function startJourney() {
+            bgm.currentTime = 0;
+            bgm.play().then(() => {
+                musicBtn.classList.add('playing');
+                musicBtn.style.display = 'flex';
+            }).catch(e => console.log(e));
+
+            startScreen.style.opacity = 0;
+            setTimeout(() => {
+                startScreen.style.display = 'none';
+                startAutoPlay();
+            }, 500);
+        }
+
+        // 重新开始
+        function replayJourney() {
+            replayScreen.style.opacity = 0;
+            setTimeout(() => {
+                replayScreen.style.display = 'none';
+
+                currentIndex = 0;
+                const pages = document.querySelectorAll('.page');
+                pages.forEach((p, i) => {
+                    p.classList.remove('active');
+                    p.style.opacity = '';
+                    if(i === 0) p.classList.add('active');
+                });
+
+                bgm.currentTime = 0;
+                bgm.play();
+                musicBtn.classList.add('playing');
+
+                startAutoPlay();
+
+            }, 500);
+        }
+
+        function nextSlide() {
+            if (currentIndex >= slides.length - 1) {
+                if(autoPlayTimer) clearInterval(autoPlayTimer);
+
+                bgm.pause();
+                musicBtn.classList.remove('playing');
+
+                setTimeout(() => {
+                    replayScreen.style.display = 'flex';
+                    setTimeout(() => replayScreen.style.opacity = 1, 50);
+                }, 500);
+
+                return;
+            }
+
+            const current = document.querySelector('.page.active');
+            const nextIndex = (currentIndex + 1) % slides.length;
+            const next = document.querySelector(`.page[data-index="${nextIndex}"]`);
+
+            if(current && next) {
+                current.style.opacity = 0;
+                setTimeout(() => {
+                    current.classList.remove('active');
+                    current.style.opacity = '';
+                    next.classList.add('active');
+                }, 800);
+                currentIndex = nextIndex;
+            }
+        }
+
+        function startAutoPlay() {
+            if(autoPlayTimer) clearInterval(autoPlayTimer);
+            autoPlayTimer = setInterval(() => {
+                nextSlide();
+            }, AUTO_PLAY_INTERVAL);
+        }
+
+        window.addEventListener('load', () => {
+            render();
+        });
+
+        // 音乐开关
+        musicBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if(bgm.paused) { bgm.play(); musicBtn.classList.add('playing'); }
+            else { bgm.pause(); musicBtn.classList.remove('playing'); }
+        });
+
+    </script>
+</body>
+</html>
